@@ -79,13 +79,13 @@ canvas = pygame.Surface((width, height))
 # define a set of colors (used repeatedly as needed)
 
 colors = [
-    Color(255, 42, 42),
-    Color(17, 192, 16),
-    Color(55, 131, 255),
-    Color(255, 140, 0),
-    Color(124, 44, 255),
-    Color(57, 202, 187),
-    Color(238, 130, 238)
+    Color(255, 42, 42),         # red
+    Color(17, 192, 16),         # green
+    Color(55, 131, 255),        # blue
+    Color(255, 140, 0),         # orange
+    Color(124, 44, 255),        # magenta
+    Color(57, 202, 187),        # cyan
+    Color(238, 130, 238)        # pink
 ]
 
 # define some patterns
@@ -101,6 +101,7 @@ septagon = makePoly(7, 500, 0.31, translate((0, 0)), Color(255, 255, 0))
 octagon = makePoly(8, 500, 0.29, translate((0, 0)), Color(255, 255, 0))
 nonagon = makePoly(9, 500, 0.26, translate((0, 0)), Color(255, 255, 0))
 ring = makePoly(25, 500, 0.15, translate((0, 0)), Color(255, 255, 0))
+colorCheck = makePoly(7, 100, 0.31, translate((0, 0)), Color(255, 255, 0))
 
 # select a pattern and create the layout
 
