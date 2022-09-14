@@ -104,7 +104,7 @@ ring = makePoly(25, 500, 0.15, translate((0, 0)), Color(255, 255, 0))
 
 # select a pattern and create the layout
 
-config = sierpinski
+config = square
 points = config.Points
 startPoint = config.StartPoint
 color = config.StartPointColor
