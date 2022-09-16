@@ -1,20 +1,25 @@
-import random
 from collections import namedtuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import sin, pi, cos
 from time import perf_counter
-from typing import List
+from typing import List, Callable
 
 import pygame
 
+import VertexRestrictions
+
 Color = namedtuple("Color", "R, G, B")
+Offset = namedtuple("Offset", "X, Y")
 
 @dataclass(frozen = True)
 class Config:
     Points: List[tuple]
     Proportion: float
     StartPoint: tuple
-    StartPointColor: Color
+    StartPointColor: Color = Color(255, 255, 0)
+    PlotPointColor: Color = Color(255, 255, 0)
+    Iterations: int = 50_000
+    VertexRestriction: Callable[[tuple, list], tuple] = field(default = VertexRestrictions.noRestriction)
 
 # ----------------------------------------------------------------------------------------------------------
 
@@ -48,7 +53,7 @@ def translate(p):
 
     return x, y
 
-def makePoly(nVert, radius, proportion, startPoint, startPointColor):
+def makePoly(nVert, radius, proportion, startPoint, startPointColor = Color(255, 255, 0), plotPointColor = Color(255, 255, 0), offset = None, iterations = 50_000, vertexRestriction = VertexRestrictions.noRestriction):
     theta = (2 * pi) / nVert
     adj = pi / 4 if nVert == 4 else 0.0     # rotate square sides are vertical and horizontal
     ps = []
@@ -56,9 +61,12 @@ def makePoly(nVert, radius, proportion, startPoint, startPointColor):
     for i in range(nVert):
         x = int(radius * sin(theta * i + adj))
         y = int(radius * cos(theta * i + adj))
+        if offset is not None:
+            x += offset.X
+            y += offset.Y
         ps.append(translate((x, y)))
 
-    return Config(ps, proportion, startPoint, startPointColor)
+    return Config(ps, proportion, startPoint, startPointColor, plotPointColor, Iterations = iterations, VertexRestriction = vertexRestriction)
 
 # ----------------------------------------------------------------------------------------------------------
 
@@ -90,26 +98,32 @@ colors = [
 
 # define some patterns
 
-sierpinski = makePoly(3, 550, 0.5, translate((0, 0)), Color(255, 255, 0))
-triangleSkewed = Config([translate((-500, -500)), translate((150, 200)), translate((500, -400))], 0.45, translate((0, 0)), Color(255, 255, 0))
-square = makePoly(4, 500, 0.45, translate((0, 0)), Color(255, 255, 0))
-quadSkewed = Config([translate((-500, 300)), translate((400, 500)), translate((500, -450)), translate((-500, -500))], 0.4, translate((0, 0)), Color(255, 255, 0))
-diamond = Config([translate((-500, 0)), translate((0, 500)), translate((500, 0)), translate((0, -500))], 0.45, translate((0, 0)), Color(255, 255, 0))
-pentagon = makePoly(5, 500, 0.38, translate((0, 0)), Color(255, 255, 0))
-hexagon = makePoly(6, 500, 0.33, translate((0, 0)), Color(255, 255, 0))
-septagon = makePoly(7, 500, 0.31, translate((0, 0)), Color(255, 255, 0))
-octagon = makePoly(8, 500, 0.29, translate((0, 0)), Color(255, 255, 0))
-nonagon = makePoly(9, 500, 0.26, translate((0, 0)), Color(255, 255, 0))
-ring = makePoly(25, 500, 0.15, translate((0, 0)), Color(255, 255, 0))
-colorCheck = makePoly(7, 100, 0.31, translate((0, 0)), Color(255, 255, 0))
+sierpinski = makePoly(3, 650, 0.5, translate((0, 0)), startPointColor = Color(0, 0, 0), offset = Offset(0, -150), iterations = 100_000)
+triangleSkewed = Config([translate((-500, -300)), translate((150, 400)), translate((500, -200))], 0.45, translate((0, 0)))
+square = makePoly(4, 500, 0.45, translate((0, 0)))
+fractalSquare = makePoly(4, 800, 0.5, translate((0, 0)), vertexRestriction = VertexRestrictions.avoidCurrent)
+quadSkewed = Config([translate((-500, 300)), translate((400, 500)), translate((500, -450)), translate((-500, -500))], 0.4, translate((0, 0)))
+diamond = Config([translate((-500, 0)), translate((0, 500)), translate((500, 0)), translate((0, -500))], 0.45, translate((0, 0)))
+pentagon = makePoly(5, 500, 0.38, translate((0, 0)))
+fractalPentagon = makePoly(5, 600, 0.5, translate((0, 0)), iterations = 100_000, vertexRestriction = VertexRestrictions.avoidCurrent)
+hexagon = makePoly(6, 590, 0.33, translate((0, 0)))
+fractalHexagon = makePoly(6, 590, 0.5, translate((0, 0)), iterations = 500_000, vertexRestriction = VertexRestrictions.avoidCurrent)
+septagon = makePoly(7, 500, 0.31, translate((0, 0)))
+octagon = makePoly(8, 500, 0.29, translate((0, 0)))
+nonagon = makePoly(9, 500, 0.26, translate((0, 0)))
+ring = makePoly(25, 500, 0.15, translate((0, 0)))
+colorCheck = makePoly(len(colors), 100, 0.5, translate((0, 0)), iterations = 10, startPointColor = Color(0, 0, 0), plotPointColor = Color(0, 0, 0))
 
 # select a pattern and create the layout
 
-config = square
+config = fractalHexagon
 points = config.Points
 startPoint = config.StartPoint
-color = config.StartPointColor
+startPointcolor = config.StartPointColor
+plotPointColpr = config.PlotPointColor
 prop = config.Proportion
+numPoints = config.Iterations
+restrictVertex = config.VertexRestriction
 plotMarkerSize = 4
 startPointSize = 2
 
@@ -120,17 +134,17 @@ for i in range(len(points)):
 
 # display the layout
 
-pygame.draw.circle(canvas, color, startPoint, startPointSize)
+pygame.draw.circle(canvas, startPointcolor, startPoint, startPointSize)
 
 win.flip()
 
 # set up the drawing and run the pygame loop
 
-numPoints = 50_000
 count = 0
 dispInterval = 10
 run = True
 reported = False
+point = None
 
 while run:
     for event in pygame.event.get():
@@ -145,13 +159,13 @@ while run:
     # add a point
 
     if count < numPoints:
-        v = random.choice(points)
-        xDiff = int((v[0] - startPoint[0]) * (1.0 - prop))
-        yDiff = int((v[1] - startPoint[1]) * (1.0 - prop))
+        point = restrictVertex(point, points)
+        xDiff = int((point[0] - startPoint[0]) * (1.0 - prop))
+        yDiff = int((point[1] - startPoint[1]) * (1.0 - prop))
         x = startPoint[0] + xDiff
         y = startPoint[1] + yDiff
         startPoint = (x, y)
-        canvas.set_at((x, y), color)
+        canvas.set_at((x, y), plotPointColpr)
         count += 1
         # display points at a redued rate that is visible with good performance
         if count % dispInterval == 0:
