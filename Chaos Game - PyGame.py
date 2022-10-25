@@ -116,7 +116,7 @@ colorCheck = makePoly(len(colors), 100, 0.5, translate((0, 0)), iterations = 10,
 
 # select a pattern and create the layout
 
-config = fractalHexagon
+config = sierpinski
 points = config.Points
 startPoint = config.StartPoint
 startPointcolor = config.StartPointColor
